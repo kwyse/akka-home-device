@@ -17,6 +17,17 @@ class Device(groupId: String, deviceId: String) extends Actor with ActorLogging 
       log.info("Recorded temperature reading {} with correlation ID {}", value, id)
 
       sender() ! TemperatureRecorded(id)
+
+    // TODO: Matching on hardcoded IDs seems retarded
+    case DeviceManager.RequestTrackDevice(correlationId, `groupId`, `deviceId`) =>
+      log.info("Registering device {}-{}", groupId, deviceId)
+      sender() ! DeviceManager.DeviceRegistered(correlationId)
+
+    case DeviceManager.RequestTrackDevice(_, group, device) =>
+      log.warning("Ignoring track device request for {}-{}, this actor is responsible for {}-{}",
+        group, device,
+        this.groupId, this.deviceId
+      )
   }
 }
 

@@ -2,6 +2,8 @@ import akka.actor.ActorSystem
 import akka.testkit.{TestKit, TestProbe}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
+import scala.concurrent.duration._
+
 class DeviceSpec extends TestKit(ActorSystem("DeviceSpec"))
 with WordSpecLike
 with Matchers
@@ -41,6 +43,31 @@ with BeforeAndAfterAll {
       val response2 = probe.expectMsgType[Device.RespondTemperature]
       response2.correlationId should ===(4)
       response2.value should ===(Some(32.6))
+    }
+
+    "reply to registration requests with correct group and device IDs" in {
+      val probe = TestProbe()
+      val deviceActor = system.actorOf(Device.props("group", "device"))
+
+      deviceActor.tell(DeviceManager.RequestTrackDevice(1, "group", "device"), probe.ref)
+      probe.expectMsg(DeviceManager.DeviceRegistered(1))
+      probe.lastSender should ===(deviceActor)
+    }
+
+    "ignore registration requests with incorrect group IDs" in {
+      val probe = TestProbe()
+      val deviceActor = system.actorOf(Device.props("group", "device"))
+
+      deviceActor.tell(DeviceManager.RequestTrackDevice(1, "wrongGroup", "device"), probe.ref)
+      probe.expectNoMessage(100.milliseconds)
+    }
+
+    "ignore registration requests with incorrect device IDs" in {
+      val probe = TestProbe()
+      val deviceActor = system.actorOf(Device.props("group", "device"))
+
+      deviceActor.tell(DeviceManager.RequestTrackDevice(1, "group", "wrongDevice"), probe.ref)
+      probe.expectNoMessage(100.milliseconds)
     }
   }
 }
